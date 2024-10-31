@@ -1,33 +1,33 @@
 #include "color.h"
+#include "ray.h"
 #include "vec3.h"
 #include <cmath>
 #include <iostream>
 
 double hit_sphere(const point3 &center, double radious, point3 &o,
-                  const vec3 &v) {
-  vec3 oc = o - center;
-  auto a = dot(v, v);
-  auto b = 2.0 * dot(oc, v);
+                  const ray &r) {
+  vec3 oc = r.origin() - center;
+  auto a = dot(r.direction(), r.direction());
+  auto b = 2.0 * dot(oc, r.direction());
   auto c = dot(oc, oc) - radious * radious;
   auto discriminant = b * b - 4 * a * c;
 
   if (discriminant < 0) {
-
     return -1;
   } else {
     return (-b - sqrt(discriminant)) / (2.0 * a);
   }
 }
 
-color ray_color(const vec3 &r) {
-  vec3 unit_direction = unit_vector(r);
+color ray_color(const ray &r) {
+  vec3 unit_direction = unit_vector(r.direction());
   auto a = 0.5 * (unit_direction.y() + 1.0);
   return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
 }
 
 int main() {
   auto aspect_ratio = 16.0 / 9.0;
-  int image_width = 400;
+  int image_width = 1920;
 
   int image_height = int(image_width / aspect_ratio);
   image_height = image_height < 1 ? 1 : image_height;
@@ -51,14 +51,14 @@ int main() {
     for (int i = 0; i < image_width; i++) {
       auto u = double(i) / (image_width - 1);
       auto v = double(j) / (image_height - 1);
-      vec3 r(lower_left_corner + u * viewport_u + v * viewport_v -
-             camera_center);
+      ray r(camera_center, lower_left_corner + u * viewport_u + v * viewport_v -
+                               camera_center);
       auto t = hit_sphere(point3(0, 0, -1), 0.5, camera_center, r);
       color pixel_color;
       if (t > 0.0) {
         pixel_color = color(1, 0, 0);
         // the normal is p - c
-        auto n = unit_vector((camera_center + t * r) - point3(0, 0, -1));
+        auto n = unit_vector(r.at(t) - point3(0, 0, -1));
         // shift the range to be [0, 2] and then divide by 2 to map to colors
         pixel_color = 0.5 * color(n.x() + 1, n.y() + 1, n.z() + 1);
       } else {
