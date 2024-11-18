@@ -27,7 +27,7 @@ color ray_color(const ray &r) {
 
 int main() {
   auto aspect_ratio = 16.0 / 9.0;
-  int image_width = 1920;
+  int image_width = 500;
 
   int image_height = int(image_width / aspect_ratio);
   image_height = image_height < 1 ? 1 : image_height;
@@ -44,6 +44,8 @@ int main() {
   auto lower_left_corner = camera_center - viewport_v / 2 - viewport_u / 2 -
                            vec3(0, 0, focal_length);
 
+  vec3 lightDir = unit_vector(vec3(-1, -1, -1));
+
   std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
   for (int j = image_height - 1; j >= 0; --j) {
@@ -56,11 +58,14 @@ int main() {
       auto t = hit_sphere(point3(0, 0, -1), 0.5, camera_center, r);
       color pixel_color;
       if (t > 0.0) {
-        pixel_color = color(1, 0, 0);
+        pixel_color = color(1, 0, 1);
         // the normal is p - c
-        auto n = unit_vector(r.at(t) - point3(0, 0, -1));
-        // shift the range to be [0, 2] and then divide by 2 to map to colors
-        pixel_color = 0.5 * color(n.x() + 1, n.y() + 1, n.z() + 1);
+        auto n_hit_point = unit_vector(r.at(t) - point3(0, 0, -1));
+
+        auto d = std::max(dot(n_hit_point, -lightDir), 0.0);
+
+        pixel_color *= d;
+
       } else {
         pixel_color = ray_color(r);
       }
