@@ -19,6 +19,13 @@ double hit_sphere(const point3 &center, double radious, point3 &o,
   }
 }
 
+double hit_floor(const ray &r) {
+  if (r.direction().y() == 0)
+    return -1;
+  double t = (-1.0 - r.origin().y()) / r.direction().y();
+  return (t > 0) ? t : -1;
+}
+
 color ray_color(const ray &r) {
   vec3 unit_direction = unit_vector(r.direction());
   auto a = 0.5 * (unit_direction.y() + 1.0);
@@ -44,7 +51,7 @@ int main() {
   auto lower_left_corner = camera_center - viewport_v / 2 - viewport_u / 2 -
                            vec3(0, 0, focal_length);
 
-  vec3 lightDir = unit_vector(vec3(-1, -1, -1));
+  vec3 lightDir = unit_vector(vec3(1, -1, -1));
 
   std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
@@ -55,17 +62,26 @@ int main() {
       auto v = double(j) / (image_height - 1);
       ray r(camera_center, lower_left_corner + u * viewport_u + v * viewport_v -
                                camera_center);
-      auto t = hit_sphere(point3(0, 0, -1), 0.5, camera_center, r);
+      auto sphere_t = hit_sphere(point3(0, 0, -1), 0.5, camera_center, r);
+      auto floor_t = hit_floor(r);
+
       color pixel_color;
-      if (t > 0.0) {
-        pixel_color = color(1, 0, 1);
+      if (sphere_t > 0.0) {
+        pixel_color = color(1, 0, 0);
         // the normal is p - c
-        auto n_hit_point = unit_vector(r.at(t) - point3(0, 0, -1));
+        auto n_hit_point = unit_vector(r.at(sphere_t) - point3(0, 0, -1));
 
         auto d = std::max(dot(n_hit_point, -lightDir), 0.0);
 
         pixel_color *= d;
 
+      } else if (floor_t > 0.0) {
+        bool white_square = (int(std::floor(r.at(floor_t).x() * 4)) +
+                             int(std::floor(r.at(floor_t).z() * 4))) %
+                                2 ==
+                            0;
+        pixel_color =
+            white_square ? color(0.9, 0.9, 0.9) : color(0.2, 0.2, 0.2);
       } else {
         pixel_color = ray_color(r);
       }
